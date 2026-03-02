@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamPro - Mock Test Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .option-btn { transition: all 0.2s; }
+        .active-q { border-left: 4px solid #2563eb; background-color: #eff6ff; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900">
+
+    <nav class="bg-white shadow-sm p-4 mb-6">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-black text-blue-600 tracking-tight">EXAM<span class="text-slate-800">PRO</span></h1>
+            <div id="nav-timer" class="hidden font-mono text-xl font-bold text-red-600 bg-red-50 px-4 py-1 rounded-full border border-red-100">
+                00:00
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4">
+        
+        <section id="creator-view" class="max-w-2xl mx-auto">
+            <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+                <h2 class="text-2xl font-bold mb-2">Create New Mock Test</h2>
+                <p class="text-slate-500 mb-6">Upload a CSV to generate a shareable test link.</p>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Test Title</label>
+                        <input type="text" id="test-title" placeholder="e.g., JEE Mains Physics Mock" class="w-full p-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Duration (Minutes)</label>
+                        <input type="number" id="test-duration" value="90" class="w-full p-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="p-6 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 transition cursor-pointer text-center">
+                        <input type="file" id="csv-file" class="hidden" accept=".csv" onchange="updateFileName(this)">
+                        <label for="csv-file" class="cursor-pointer">
+                            <span id="file-label" class="text-slate-600 font-medium">Click to upload CSV questions</span>
+                            <p class="text-xs text-slate-400 mt-1">Headers: question, option_a, option_b, option_c, option_d, correct_option</p>
+                        </label>
+                    </div>
+                    <button onclick="uploadTest()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95">
+                        Generate Test Link
+                    </button>
+                </div>
+                <div id="share-area" class="mt-6 hidden p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p class="text-green-800 text-sm font-medium">Test Created! Share this ID:</p>
+                    <div class="flex items-center mt-2">
+                        <code id="share-id" class="flex-1 bg-white p-2 rounded border border-green-200 font-mono font-bold"></code>
+                        <button onclick="copyID()" class="ml-2 text-blue-600 text-sm font-bold">Copy</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 text-center">
+                <p class="text-slate-400 text-sm">Or Enter a Test ID to start:</p>
+                <div class="mt-2 flex gap-2 justify-center">
+                    <input type="text" id="join-id" placeholder="Test ID" class="p-2 border rounded-lg outline-none w-32">
+                    <button onclick="loadTest(document.getElementById('join-id').value)" class="bg-slate-800 text-white px-6 py-2 rounded-lg font-bold">Start Test</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="test-view" class="hidden grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="lg:col-span-1 bg-white p-4 rounded-xl shadow-sm border border-slate-100 h-fit">
+                <h3 class="font-bold mb-4 flex justify-between">Questions <span id="q-progress" class="text-blue-600">0/0</span></h3>
+                <div id="palette" class="grid grid-cols-5 gap-2">
+                    </div>
+            </div>
+
+            <div class="lg:col-span-3 space-y-6">
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 min-h-[400px]">
+                    <div class="flex justify-between items-start mb-6">
+                        <span id="q-badge" class="bg-blue-100 text-blue-700 px-3 py-1 rounded-md text-sm font-bold">Question 1</span>
+                        <span class="text-slate-400 text-sm">Time on this question: <span id="q-timer" class="text-slate-900 font-mono font-bold">0s</span></span>
+                    </div>
+                    <p id="q-text" class="text-xl font-medium leading-relaxed text-slate-800 mb-8"></p>
+                    <div id="options-container" class="space-y-3">
+                        </div>
+                </div>
+
+                <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                    <button onclick="prevQ()" class="px-6 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 font-bold">Previous</button>
+                    <div class="space-x-2">
+                        <button onclick="clearAnswer()" class="px-4 py-2 text-slate-500 hover:underline">Clear Answer</button>
+                        <button onclick="submitTest()" class="px-8 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold shadow-md">Finish Test</button>
+                    </div>
+                    <button onclick="nextQ()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold">Next</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="results-view" class="hidden max-w-4xl mx-auto">
+            <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl font-black mb-2">Test Analysis</h2>
+                    <p id="score-text" class="text-lg text-slate-500"></p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10 text-center">
+                    <div class="p-4 bg-green-50 rounded-xl"><p class="text-xs uppercase text-green-600 font-bold">Correct</p><p id="stat-correct" class="text-2xl font-bold">0</p></div>
+                    <div class="p-4 bg-red-50 rounded-xl"><p class="text-xs uppercase text-red-600 font-bold">Wrong</p><p id="stat-wrong" class="text-2xl font-bold">0</p></div>
+                    <div class="p-4 bg-slate-50 rounded-xl"><p class="text-xs uppercase text-slate-600 font-bold">Skipped</p><p id="stat-skipped" class="text-2xl font-bold">0</p></div>
+                    <div class="p-4 bg-blue-50 rounded-xl"><p class="text-xs uppercase text-blue-600 font-bold">Avg Speed</p><p id="stat-speed" class="text-2xl font-bold">0s</p></div>
+                </div>
+
+                <div id="detailed-analysis" class="space-y-4">
+                    </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const API_BASE = "http://127.0.0.1:8000";
+        let testData = { questions: [], metadata: {} };
+        let currentIdx = 0;
+        let userAnswers = {}; // {q_id: 'A'}
+        let questionTimeSpent = {}; // {idx: seconds}
+        let totalSecondsLeft = 0;
+        let globalTimer, questionTimer;
+
+        function updateFileName(input) {
+            document.getElementById('file-label').innerText = input.files[0].name;
+        }
+
+        async function uploadTest() {
+            const fileInput = document.getElementById('csv-file');
+            const title = document.getElementById('test-title').value;
+            const duration = document.getElementById('test-duration').value;
+
+            if(!fileInput.files[0] || !title) return alert("Please fill all details");
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('title', title);
+            formData.append('duration', duration);
+
+            const res = await fetch(`${API_BASE}/create-test-csv/`, { method: 'POST', body: formData });
+            const data = await res.json();
+            
+            document.getElementById('share-area').classList.remove('hidden');
+            document.getElementById('share-id').innerText = data.test_id;
+        }
+
+        async function loadTest(testId) {
+            try {
+                const res = await fetch(`${API_BASE}/get-test/${testId}`);
+                if(!res.ok) throw new Error();
+                const data = await res.json();
+                
+                testData = data;
+                totalSecondsLeft = data.metadata.duration_mins * 60;
+                
+                initTestUI();
+            } catch(e) { alert("Invalid Test ID"); }
+        }
+
+        function initTestUI() {
+            document.getElementById('creator-view').classList.add('hidden');
+            document.getElementById('test-view').classList.remove('hidden');
+            document.getElementById('nav-timer').classList.remove('hidden');
+            
+            renderPalette();
+            renderQuestion();
+            startTimers();
+        }
+
+        function startTimers() {
+            globalTimer = setInterval(() => {
+                totalSecondsLeft--;
+                const m = Math.floor(totalSecondsLeft/60);
+                const s = totalSecondsLeft % 60;
+                document.getElementById('nav-timer').innerText = `${m}:${s < 10 ? '0':''}${s}`;
+                if(totalSecondsLeft <= 0) submitTest();
+            }, 1000);
+
+            questionTimer = setInterval(() => {
+                if(!questionTimeSpent[currentIdx]) questionTimeSpent[currentIdx] = 0;
+                questionTimeSpent[currentIdx]++;
+                document.getElementById('q-timer').innerText = questionTimeSpent[currentIdx] + "s";
+            }, 1000);
+        }
+
+        function renderPalette() {
+            const p = document.getElementById('palette');
+            p.innerHTML = '';
+            testData.questions.forEach((_, i) => {
+                const btn = document.createElement('button');
+                btn.innerText = i + 1;
+                btn.className = `w-10 h-10 rounded border text-sm font-bold ${userAnswers[i] ? 'bg-green-500 text-white' : 'bg-slate-50'}`;
+                if(i === currentIdx) btn.classList.add('ring-2', 'ring-blue-600');
+                btn.onclick = () => jumpTo(i);
+                p.appendChild(btn);
+            });
+            document.getElementById('q-progress').innerText = `${Object.keys(userAnswers).length}/${testData.questions.length}`;
+        }
+
+        function renderQuestion() {
+            const q = testData.questions[currentIdx];
+            document.getElementById('q-badge').innerText = `Question ${currentIdx + 1}`;
+            document.getElementById('q-text').innerText = q.question_text;
+            
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            
+            ['a', 'b', 'c', 'd'].forEach(letter => {
+                const isSelected = userAnswers[currentIdx] === letter.toUpperCase();
+                container.innerHTML += `
+                    <button onclick="select('${letter.toUpperCase()}')" class="option-btn w-full p-4 rounded-xl border-2 text-left flex items-center gap-4 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-100 hover:border-slate-200'}">
+                        <span class="w-8 h-8 rounded-full border flex items-center justify-center font-bold ${isSelected ? 'bg-blue-600 text-white border-blue-600' : 'bg-white'}">${letter.toUpperCase()}</span>
+                        <span class="${isSelected ? 'text-blue-900 font-bold' : ''}">${q['option_'+letter]}</span>
+                    </button>
+                `;
+            });
+            document.getElementById('q-timer').innerText = (questionTimeSpent[currentIdx] || 0) + "s";
+            renderPalette();
+        }
+
+        function select(val) { userAnswers[currentIdx] = val; renderQuestion(); }
+        function jumpTo(i) { currentIdx = i; renderQuestion(); }
+        function nextQ() { if(currentIdx < testData.questions.length - 1) { currentIdx++; renderQuestion(); } }
+        function prevQ() { if(currentIdx > 0) { currentIdx--; renderQuestion(); } }
+        function clearAnswer() { delete userAnswers[currentIdx]; renderQuestion(); }
+
+        function submitTest() {
+            clearInterval(globalTimer);
+            clearInterval(questionTimer);
+            
+            document.getElementById('test-view').classList.add('hidden');
+            document.getElementById('nav-timer').classList.add('hidden');
+            document.getElementById('results-view').classList.remove('hidden');
+
+            let correct = 0, wrong = 0, skipped = 0, totalTime = 0;
+            const container = document.getElementById('detailed-analysis');
+            container.innerHTML = '';
+
+            testData.questions.forEach((q, i) => {
+                const ans = userAnswers[i];
+                const time = questionTimeSpent[i] || 0;
+                totalTime += time;
+                
+                let status = "Skipped", color = "bg-slate-50";
+                if(ans) {
+                    if(ans === q.correct_option) { correct++; status = "Correct"; color = "bg-green-50"; }
+                    else { wrong++; status = "Wrong"; color = "bg-red-50"; }
+                } else { skipped++; }
+
+                container.innerHTML += `
+                    <div class="flex items-center justify-between p-4 ${color} rounded-lg">
+                        <div>
+                            <p class="font-bold text-sm">Q${i+1}: ${status}</p>
+                            <p class="text-xs text-slate-500">Correct: ${q.correct_option} | Your Ans: ${ans || '-'}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-mono text-sm font-bold">${time}s</p>
+                            <p class="text-[10px] uppercase text-slate-400">Time Spent</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('stat-correct').innerText = correct;
+            document.getElementById('stat-wrong').innerText = wrong;
+            document.getElementById('stat-skipped').innerText = skipped;
+            document.getElementById('stat-speed').innerText = Math.round(totalTime/testData.questions.length) + "s";
+            document.getElementById('score-text').innerText = `You scored ${correct} out of ${testData.questions.length}`;
+        }
+    </script>
+</body>
+</html>
