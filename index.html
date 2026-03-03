@@ -24,19 +24,29 @@
     <style>
         .option-btn { transition: all 0.2s; }
         .active-q { outline: 3px solid #2563eb; outline-offset: 2px; }
+        
+        /* Enhanced Loader */
         .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3498db;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
+            width: 18px;
+            height: 18px;
+            animation: spin 0.8s linear infinite;
             display: inline-block;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
         #palette::-webkit-scrollbar { width: 4px; }
         #palette::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
         .mjx-chtml { white-space: normal !important; }
+
+        /* Button Disable State */
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-900 tex2jax_process">
@@ -90,10 +100,6 @@
                     <div class="flex justify-between items-center mb-4"><h3 class="font-bold">Palette</h3><span id="q-progress" class="text-sm font-bold text-blue-600">0/0</span></div>
                     <div id="palette" class="grid grid-cols-5 gap-2 max-h-64 overflow-y-auto pr-2"></div>
                 </div>
-                <div class="bg-blue-600 p-5 rounded-xl text-white shadow-lg">
-                    <p class="text-xs font-bold uppercase opacity-80">Overall Progress</p>
-                    <div class="w-full bg-blue-400 h-2 rounded-full mt-2"><div id="progress-bar" class="bg-white h-2 rounded-full transition-all duration-500" style="width: 0%"></div></div>
-                </div>
             </div>
 
             <div class="lg:col-span-3 space-y-6">
@@ -113,7 +119,10 @@
                     <button onclick="prevQ()" class="px-8 py-3 border-2 border-slate-100 rounded-xl font-bold hover:bg-slate-50">Previous</button>
                     <div class="flex gap-4">
                         <button onclick="clearAnswer()" class="px-4 text-slate-400 font-bold hover:text-slate-600">Clear</button>
-                        <button onclick="confirmSubmit()" class="px-10 py-3 bg-red-600 text-white rounded-xl font-bold shadow-lg hover:bg-red-700">End Test</button>
+                        <button id="finish-btn" onclick="confirmSubmit()" class="px-10 py-3 bg-red-600 text-white rounded-xl font-bold shadow-lg hover:bg-red-700 flex items-center gap-2">
+                            <span id="finish-text">End Test</span>
+                            <div id="finish-loader" class="loader hidden"></div>
+                        </button>
                     </div>
                     <button onclick="nextQ()" class="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700">Next</button>
                 </div>
@@ -121,7 +130,7 @@
         </section>
 
         <section id="results-view" class="hidden max-w-4xl mx-auto space-y-6">
-            <div class="bg-white p-10 rounded-3xl shadow-xl border border-slate-100 text-center relative overflow-hidden">
+            <div class="bg-white p-10 rounded-3xl shadow-xl border border-slate-100 text-center relative">
                 <div class="absolute top-0 left-0 w-full h-2 bg-blue-600"></div>
                 <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Exam Performance</h2>
                 <div id="final-score-box" class="text-7xl font-black text-slate-900 mb-2">0.00</div>
@@ -133,7 +142,10 @@
                     <div class="p-6 bg-blue-50 rounded-2xl border border-blue-100"><p class="text-[10px] font-black text-blue-600 uppercase mb-1">Avg Time</p><p id="stat-speed" class="text-3xl font-black text-blue-700">0s</p></div>
                 </div>
             </div>
-            <div id="detailed-analysis" class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6"></div>
+            
+            <h3 class="text-xl font-bold px-2">Detailed Question Review</h3>
+            <div id="detailed-analysis" class="space-y-4"></div>
+            
             <button onclick="location.reload()" class="w-full py-4 bg-slate-800 text-white rounded-xl font-bold">Back to Home</button>
         </section>
     </main>
@@ -146,6 +158,7 @@
         let questionTimeSpent = {};
         let totalSecondsLeft = 0;
         let globalTimer, questionTimer, activeTestId = null;
+        let isProcessingSubmit = false; // Guard for double submission
 
         function updateFileName(input) { document.getElementById('file-label').innerText = input.files[0].name; }
         function renderMath() { if (window.MathJax && window.MathJax.typesetPromise) MathJax.typesetPromise(); }
@@ -226,7 +239,6 @@
             });
             const att = Object.keys(userAnswers).length;
             document.getElementById('q-progress').innerText = `${att}/${testData.questions.length}`;
-            document.getElementById('progress-bar').style.width = (att / testData.questions.length * 100) + "%";
         }
 
         function renderQuestion() {
@@ -250,10 +262,26 @@
         function nextQ() { if(currentIdx < testData.questions.length - 1) { currentIdx++; renderQuestion(); } }
         function prevQ() { if(currentIdx > 0) { currentIdx--; renderQuestion(); } }
         function clearAnswer() { delete userAnswers[currentIdx]; saveSession(); renderQuestion(); }
-        function confirmSubmit() { if(confirm("End test?")) submitTest(); }
+        
+        function confirmSubmit() { 
+            if(isProcessingSubmit) return;
+            if(confirm("Are you sure you want to end the test?")) submitTest(); 
+        }
 
         async function submitTest() {
+            if(isProcessingSubmit) return;
+            isProcessingSubmit = true;
+
+            // UI Feedback: Loader & Disable
+            const btn = document.getElementById('finish-btn');
+            const loader = document.getElementById('finish-loader');
+            const txt = document.getElementById('finish-text');
+            btn.disabled = true;
+            loader.classList.remove('hidden');
+            txt.innerText = "Submitting...";
+
             clearInterval(globalTimer); clearInterval(questionTimer);
+
             let c = 0, w = 0, tt = 0, det = {};
             testData.questions.forEach((q, i) => {
                 const ans = userAnswers[i] || null, isCorrect = ans === q.correct_option;
@@ -261,33 +289,83 @@
                 tt += (questionTimeSpent[i] || 0);
                 det[i] = { ans, isCorrect, time: (questionTimeSpent[i] || 0) };
             });
+
             const score = (c - (w * 0.33)).toFixed(2);
-            await fetch(`${API_BASE}/save-attempt/`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ test_id: activeTestId, total_time_taken: tt, questions_attempted: Object.keys(userAnswers).length, correct_count: c, final_score: parseFloat(score), detailed_answers: det })
-            });
-            localStorage.removeItem(`session_${activeTestId}`);
-            showResults(c, w, tt, det, score);
+
+            try {
+                await fetch(`${API_BASE}/save-attempt/`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        test_id: activeTestId, 
+                        total_time_taken: tt, 
+                        questions_attempted: Object.keys(userAnswers).length, 
+                        correct_count: c, 
+                        final_score: parseFloat(score), 
+                        detailed_answers: det 
+                    })
+                });
+                localStorage.removeItem(`session_${activeTestId}`);
+                showResults(c, w, tt, det, score);
+            } catch (e) {
+                alert("Error saving results. Please check your connection.");
+                isProcessingSubmit = false;
+                btn.disabled = false;
+                loader.classList.add('hidden');
+                txt.innerText = "End Test";
+            }
         }
 
         function showResults(c, w, tt, det, score) {
             document.getElementById('test-view').classList.add('hidden');
             document.getElementById('results-view').classList.remove('hidden');
             document.getElementById('nav-timer').classList.add('hidden');
+            
             document.getElementById('final-score-box').innerText = score;
             document.getElementById('stat-correct').innerText = c;
             document.getElementById('stat-wrong').innerText = w;
             document.getElementById('stat-skipped').innerText = testData.questions.length - (c + w);
             document.getElementById('stat-speed').innerText = Math.round(tt/testData.questions.length) + "s";
+            
             const container = document.getElementById('detailed-analysis');
-            container.innerHTML = testData.questions.map((q, i) => `
-                <div class="p-6 rounded-2xl border-2 ${det[i].ans ? (det[i].isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50') : 'border-slate-100'}">
-                    <p class="font-bold mb-4">${q.question_text}</p>
-                    <div class="grid grid-cols-2 gap-4 text-sm font-medium">
-                        <p class="${det[i].isCorrect ? 'text-green-700' : 'text-red-700'}">Your: ${det[i].ans || 'Skipped'}</p>
-                        <p class="text-blue-700">Correct: ${q.correct_option} | ${det[i].time}s</p>
+            container.innerHTML = testData.questions.map((q, i) => {
+                const userChoice = det[i].ans; // 'A', 'B', etc.
+                const correctChoice = q.correct_option;
+                
+                // Helper to get actual text value
+                const getVal = (letter) => letter ? q['option_' + letter.toLowerCase()] : "Not Answered";
+                
+                const userVal = getVal(userChoice);
+                const correctVal = getVal(correctChoice);
+
+                return `
+                <div class="p-6 rounded-2xl border-2 bg-white shadow-sm ${det[i].ans ? (det[i].isCorrect ? 'border-green-200' : 'border-red-200') : 'border-slate-100'}">
+                    <div class="flex justify-between mb-3">
+                        <span class="text-xs font-bold px-2 py-1 rounded bg-slate-100 text-slate-500 uppercase">Question ${i+1}</span>
+                        <span class="text-xs font-bold text-slate-400">${det[i].time}s spent</span>
                     </div>
-                </div>`).join('');
+                    <p class="font-bold text-lg mb-4 text-slate-800">${q.question_text}</p>
+                    
+                    <div class="space-y-2">
+                        <div class="p-3 rounded-lg flex items-center gap-3 ${det[i].isCorrect ? 'bg-green-50 border border-green-100' : (userChoice ? 'bg-red-50 border border-red-100' : 'bg-slate-50 border border-slate-100')}">
+                            <span class="font-black text-sm">${userChoice || '—'}</span>
+                            <div class="flex-1">
+                                <p class="text-[10px] uppercase font-black opacity-50">Your Answer</p>
+                                <p class="font-bold ${det[i].isCorrect ? 'text-green-700' : 'text-red-700'}">${userVal}</p>
+                            </div>
+                        </div>
+
+                        ${!det[i].isCorrect ? `
+                        <div class="p-3 rounded-lg flex items-center gap-3 bg-blue-50 border border-blue-100">
+                            <span class="font-black text-sm">${correctChoice}</span>
+                            <div class="flex-1">
+                                <p class="text-[10px] uppercase font-black opacity-50 text-blue-600">Correct Answer</p>
+                                <p class="font-bold text-blue-700">${correctVal}</p>
+                            </div>
+                        </div>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+            
             renderMath();
         }
 
