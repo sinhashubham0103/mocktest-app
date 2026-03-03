@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ExamPro - Mock Test Platform</title>
+    <title>ExamPro - Advanced Mock Analysis</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .option-btn { transition: all 0.2s; }
-        .active-q { border-left: 4px solid #2563eb; background-color: #eff6ff; }
+        .active-q { outline: 3px solid #2563eb; outline-offset: 2px; }
         .loader {
             border: 3px solid #f3f3f3;
             border-top: 3px solid #3498db;
@@ -18,38 +18,32 @@
             display: inline-block;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #palette::-webkit-scrollbar { width: 4px; }
+        #palette::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-900">
 
-    <nav class="bg-white shadow-sm p-4 mb-6">
+    <nav class="bg-white shadow-sm p-4 sticky top-0 z-50">
         <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-black text-blue-600 tracking-tight">EXAM<span class="text-slate-800">PRO</span></h1>
-            <div id="nav-timer" class="hidden font-mono text-xl font-bold text-red-600 bg-red-50 px-4 py-1 rounded-full border border-red-100">
-                00:00
+            <h1 class="text-2xl font-black text-blue-600 tracking-tight cursor-pointer" onclick="location.reload()">EXAM<span class="text-slate-800">PRO</span></h1>
+            <div class="flex items-center gap-4">
+                <div id="nav-timer" class="hidden font-mono text-xl font-bold text-red-600 bg-red-50 px-4 py-1 rounded-full border border-red-100">00:00</div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto px-4">
+    <main class="max-w-6xl mx-auto px-4 mt-6 pb-20">
         
-        <section id="creator-view" class="max-w-2xl mx-auto">
+        <section id="creator-view" class="max-w-2xl mx-auto space-y-6">
             <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
                 <h2 class="text-2xl font-bold mb-2">Create New Mock Test</h2>
-                <p class="text-slate-500 mb-6">Upload a CSV to generate a shareable test link.</p>
-                
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-semibold mb-1">Test Title</label>
-                        <input type="text" id="test-title" placeholder="e.g., RRB JE Physics Mock" class="w-full p-3 rounded-lg border border-slate-200 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold mb-1">Duration (Minutes)</label>
-                        <input type="number" id="test-duration" value="90" class="w-full p-3 rounded-lg border border-slate-200 outline-none">
-                    </div>
-                    <div class="p-6 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 text-center">
+                    <input type="text" id="test-title" placeholder="Test Title" class="w-full p-3 rounded-lg border border-slate-200 outline-none focus:border-blue-500">
+                    <input type="number" id="test-duration" value="90" class="w-full p-3 rounded-lg border border-slate-200 outline-none">
+                    <div class="p-6 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 text-center relative">
                         <input type="file" id="csv-file" class="hidden" accept=".csv" onchange="updateFileName(this)">
-                        <label for="csv-file" class="cursor-pointer">
+                        <label for="csv-file" class="cursor-pointer block">
                             <span id="file-label" class="text-slate-600 font-medium">Click to upload CSV questions</span>
                         </label>
                     </div>
@@ -58,65 +52,105 @@
                         <div id="btn-loader" class="loader hidden"></div>
                     </button>
                 </div>
-
                 <div id="share-area" class="mt-6 hidden p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <p class="text-green-800 text-sm font-medium">Test Created! Share this ID:</p>
+                    <p class="text-green-800 text-sm font-medium">Share this ID with the student:</p>
                     <code id="share-id" class="block bg-white p-2 mt-2 rounded border font-mono font-bold text-center text-lg"></code>
                 </div>
             </div>
 
-            <div class="mt-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <h3 class="font-bold mb-4">Take a Test or View History</h3>
-                <div class="flex gap-2">
-                    <input type="text" id="join-id" placeholder="Enter Test ID" class="flex-1 p-2 border rounded-lg outline-none">
-                    <button onclick="loadTest(document.getElementById('join-id').value)" class="bg-slate-800 text-white px-6 py-2 rounded-lg font-bold">Start</button>
-                    <button onclick="fetchHistory(document.getElementById('join-id').value)" class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-bold">History</button>
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="font-bold mb-4 text-lg">Student Portal</h3>
+                <div class="flex gap-2 mb-6">
+                    <input type="text" id="join-id" placeholder="Enter Test ID" class="flex-1 p-3 border rounded-lg outline-none">
+                    <button onclick="loadTest(document.getElementById('join-id').value)" class="bg-slate-800 text-white px-6 py-2 rounded-lg font-bold hover:bg-black">Start Exam</button>
+                    <button onclick="fetchHistory(document.getElementById('join-id').value)" class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-bold hover:bg-blue-200">History</button>
                 </div>
-                <div id="history-container" class="mt-4 space-y-2 hidden">
-                    <p class="text-xs font-bold uppercase text-slate-400">Attempt Logs</p>
-                    <div id="history-list" class="text-sm"></div>
+                <div id="history-container" class="hidden">
+                    <div id="history-list" class="space-y-3"></div>
                 </div>
             </div>
         </section>
 
         <section id="test-view" class="hidden grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div class="lg:col-span-1 bg-white p-4 rounded-xl shadow-sm border border-slate-100 h-fit">
-                <h3 class="font-bold mb-4 flex justify-between">Questions <span id="q-progress" class="text-blue-600">0/0</span></h3>
-                <div id="palette" class="grid grid-cols-5 gap-2"></div>
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold">Palette</h3>
+                        <span id="q-progress" class="text-sm font-bold text-blue-600">0/0</span>
+                    </div>
+                    <div id="palette" class="grid grid-cols-5 gap-2 max-h-64 overflow-y-auto pr-2"></div>
+                </div>
+                <div class="bg-blue-600 p-5 rounded-xl text-white shadow-lg">
+                    <p class="text-xs font-bold uppercase opacity-80">Overall Progress</p>
+                    <div class="w-full bg-blue-400 h-2 rounded-full mt-2">
+                        <div id="progress-bar" class="bg-white h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
             </div>
 
             <div class="lg:col-span-3 space-y-6">
-                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 min-h-[400px]">
-                    <div class="flex justify-between items-start mb-6">
-                        <span id="q-badge" class="bg-blue-100 text-blue-700 px-3 py-1 rounded-md text-sm font-bold">Question 1</span>
-                        <span class="text-slate-400 text-sm">Timer: <span id="q-timer" class="text-slate-900 font-mono font-bold">0s</span></span>
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 min-h-[450px]">
+                    <div class="flex justify-between items-start mb-8">
+                        <span id="q-badge" class="bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full text-sm font-black">QUESTION 1</span>
+                        <div class="text-right">
+                            <span class="text-xs text-slate-400 block uppercase font-bold tracking-widest">Time Spent</span>
+                            <span id="q-timer" class="text-2xl font-mono font-bold text-slate-800">0s</span>
+                        </div>
                     </div>
-                    <p id="q-text" class="text-xl font-medium leading-relaxed text-slate-800 mb-8"></p>
-                    <div id="options-container" class="space-y-3"></div>
+                    <p id="q-text" class="text-xl font-semibold leading-relaxed text-slate-800 mb-10"></p>
+                    <div id="options-container" class="grid grid-cols-1 gap-4"></div>
                 </div>
 
-                <div class="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-100">
-                    <button onclick="prevQ()" class="px-6 py-2 border rounded-lg font-bold hover:bg-slate-50">Previous</button>
-                    <button onclick="submitTest()" class="px-8 py-2 bg-red-600 text-white rounded-lg font-bold shadow-md hover:bg-red-700">Finish Test</button>
-                    <button onclick="nextQ()" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">Next</button>
+                <div class="flex justify-between items-center bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+                    <button onclick="prevQ()" class="px-8 py-3 border-2 border-slate-100 rounded-xl font-bold hover:bg-slate-50 active:scale-95 transition">Previous</button>
+                    <div class="flex gap-4">
+                        <button onclick="clearAnswer()" class="px-4 text-slate-400 font-bold hover:text-slate-600">Clear</button>
+                        <button onclick="confirmSubmit()" class="px-10 py-3 bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-100 hover:bg-red-700 active:scale-95 transition">End Test</button>
+                    </div>
+                    <button onclick="nextQ()" class="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition">Next Question</button>
                 </div>
             </div>
         </section>
 
-        <section id="results-view" class="hidden max-w-4xl mx-auto">
-            <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-100 text-center">
-                <h2 class="text-3xl font-black mb-2">Test Results</h2>
-                <div id="final-score-box" class="text-5xl font-black text-blue-600 my-6">0.00</div>
+        <section id="results-view" class="hidden max-w-4xl mx-auto space-y-6">
+            <div class="bg-white p-10 rounded-3xl shadow-xl border border-slate-100 text-center relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-2 bg-blue-600"></div>
+                <h2 class="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Exam Performance</h2>
+                <div id="final-score-box" class="text-7xl font-black text-slate-900 mb-2">0.00</div>
+                <p class="text-slate-500 font-bold mb-8">Total Marks (1/3 Negative Marking applied)</p>
                 
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-                    <div class="p-4 bg-green-50 rounded-xl"><p class="text-xs font-bold text-green-600">CORRECT</p><p id="stat-correct" class="text-2xl font-bold">0</p></div>
-                    <div class="p-4 bg-red-50 rounded-xl"><p class="text-xs font-bold text-red-600">WRONG</p><p id="stat-wrong" class="text-2xl font-bold">0</p></div>
-                    <div class="p-4 bg-slate-50 rounded-xl"><p class="text-xs font-bold text-slate-600">SKIPPED</p><p id="stat-skipped" class="text-2xl font-bold">0</p></div>
-                    <div class="p-4 bg-blue-50 rounded-xl"><p class="text-xs font-bold text-blue-600">TIME</p><p id="stat-speed" class="text-2xl font-bold">0s</p></div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div class="p-6 bg-green-50 rounded-2xl border border-green-100">
+                        <p class="text-[10px] font-black text-green-600 uppercase mb-1">Correct</p>
+                        <p id="stat-correct" class="text-3xl font-black text-green-700">0</p>
+                    </div>
+                    <div class="p-6 bg-red-50 rounded-2xl border border-red-100">
+                        <p class="text-[10px] font-black text-red-600 uppercase mb-1">Wrong</p>
+                        <p id="stat-wrong" class="text-3xl font-black text-red-700">0</p>
+                    </div>
+                    <div class="p-6 bg-slate-50 rounded-2xl border border-slate-200">
+                        <p class="text-[10px] font-black text-slate-500 uppercase mb-1">Skipped</p>
+                        <p id="stat-skipped" class="text-3xl font-black text-slate-700">0</p>
+                    </div>
+                    <div class="p-6 bg-blue-50 rounded-2xl border border-blue-100">
+                        <p class="text-[10px] font-black text-blue-600 uppercase mb-1">Avg Time</p>
+                        <p id="stat-speed" class="text-3xl font-black text-blue-700">0s</p>
+                    </div>
                 </div>
+            </div>
 
-                <div id="detailed-analysis" class="text-left space-y-4"></div>
-                <button onclick="location.reload()" class="mt-10 px-8 py-3 bg-slate-800 text-white rounded-xl font-bold">Back to Home</button>
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                <h3 class="font-bold text-xl mb-6 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Question-by-Question Analysis
+                </h3>
+                <div id="detailed-analysis" class="space-y-4"></div>
+                <div class="mt-10 flex gap-4">
+                    <button onclick="location.reload()" class="flex-1 py-4 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition">Return to Home</button>
+                    <button onclick="window.print()" class="flex-1 py-4 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition">Download Result (PDF)</button>
+                </div>
             </div>
         </section>
 
@@ -130,7 +164,9 @@
         let questionTimeSpent = {};
         let totalSecondsLeft = 0;
         let globalTimer, questionTimer;
+        let activeTestId = null;
 
+        // --- UTILS & CORE ---
         function updateFileName(input) { document.getElementById('file-label').innerText = input.files[0].name; }
 
         async function uploadTest() {
@@ -140,9 +176,9 @@
             const title = document.getElementById('test-title').value;
             const duration = document.getElementById('test-duration').value;
 
-            if(!fileInput.files[0] || !title) return alert("Please provide title and CSV file.");
+            if(!fileInput.files[0] || !title) return alert("Please fill Title and upload CSV.");
 
-            btnText.innerText = "Generating...";
+            btnText.innerText = "Processing...";
             btnLoader.classList.remove('hidden');
 
             const formData = new FormData();
@@ -155,20 +191,36 @@
                 const data = await res.json();
                 document.getElementById('share-area').classList.remove('hidden');
                 document.getElementById('share-id').innerText = data.test_id;
-            } catch (e) { alert("Upload failed. Check backend."); }
+                document.getElementById('join-id').value = data.test_id;
+            } catch (e) { alert("Error connecting to backend."); }
             
             btnText.innerText = "Generate Test Link";
             btnLoader.classList.add('hidden');
         }
 
+        // --- EXAM LOGIC ---
         async function loadTest(testId) {
+            if(!testId) return alert("Enter Test ID");
             try {
                 const res = await fetch(`${API_BASE}/get-test/${testId}`);
                 if(!res.ok) throw new Error();
                 testData = await res.json();
-                totalSecondsLeft = testData.metadata.duration_mins * 60;
+                activeTestId = testId;
+
+                // Check for recovered session
+                const saved = localStorage.getItem(`session_${testId}`);
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    userAnswers = data.userAnswers || {};
+                    questionTimeSpent = data.questionTimeSpent || {};
+                    totalSecondsLeft = data.totalSecondsLeft;
+                    currentIdx = data.currentIdx || 0;
+                } else {
+                    totalSecondsLeft = testData.metadata.duration_mins * 60;
+                }
+                
                 initTestUI();
-            } catch(e) { alert("Invalid Test ID"); }
+            } catch(e) { alert("Test not found in database."); }
         }
 
         function initTestUI() {
@@ -183,12 +235,22 @@
                 totalSecondsLeft--;
                 const m = Math.floor(totalSecondsLeft/60), s = totalSecondsLeft % 60;
                 document.getElementById('nav-timer').innerText = `${m}:${s < 10 ? '0':''}${s}`;
+                
+                // Persistence save every 5s
+                if(totalSecondsLeft % 5 === 0) saveSession();
                 if(totalSecondsLeft <= 0) submitTest();
             }, 1000);
+
             questionTimer = setInterval(() => {
                 questionTimeSpent[currentIdx] = (questionTimeSpent[currentIdx] || 0) + 1;
                 document.getElementById('q-timer').innerText = questionTimeSpent[currentIdx] + "s";
             }, 1000);
+        }
+
+        function saveSession() {
+            localStorage.setItem(`session_${activeTestId}`, JSON.stringify({
+                userAnswers, questionTimeSpent, totalSecondsLeft, currentIdx
+            }));
         }
 
         function renderPalette() {
@@ -196,32 +258,45 @@
             testData.questions.forEach((_, i) => {
                 const btn = document.createElement('button');
                 btn.innerText = i + 1;
-                btn.className = `w-10 h-10 rounded border text-sm font-bold ${userAnswers[i] ? 'bg-green-500 text-white' : 'bg-slate-50'} ${i === currentIdx ? 'ring-2 ring-blue-600' : ''}`;
+                let baseClass = "w-10 h-10 rounded-lg border-2 text-sm font-bold transition-all ";
+                if (userAnswers[i]) baseClass += "bg-green-500 border-green-600 text-white ";
+                else baseClass += "bg-white border-slate-100 text-slate-400 ";
+                if (i === currentIdx) btn.className = baseClass + "active-q";
+                else btn.className = baseClass;
+                
                 btn.onclick = () => { currentIdx = i; renderQuestion(); };
                 p.appendChild(btn);
             });
-            document.getElementById('q-progress').innerText = `${Object.keys(userAnswers).length}/${testData.questions.length}`;
+            const attempted = Object.keys(userAnswers).length;
+            document.getElementById('q-progress').innerText = `${attempted}/${testData.questions.length}`;
+            document.getElementById('progress-bar').style.width = (attempted / testData.questions.length * 100) + "%";
         }
 
         function renderQuestion() {
             const q = testData.questions[currentIdx];
-            document.getElementById('q-badge').innerText = `Question ${currentIdx + 1}`;
+            document.getElementById('q-badge').innerText = `QUESTION ${currentIdx + 1}`;
             document.getElementById('q-text').innerText = q.question_text;
             const container = document.getElementById('options-container'); container.innerHTML = '';
+            
             ['a', 'b', 'c', 'd'].forEach(letter => {
                 const L = letter.toUpperCase();
                 const isSel = userAnswers[currentIdx] === L;
-                container.innerHTML += `<button onclick="select('${L}')" class="option-btn w-full p-4 rounded-xl border-2 text-left flex items-center gap-4 ${isSel ? 'border-blue-500 bg-blue-50' : 'border-slate-100'}">
-                    <span class="w-8 h-8 rounded-full border flex items-center justify-center font-bold ${isSel ? 'bg-blue-600 text-white' : 'bg-white'}">${L}</span>
-                    <span>${q['option_'+letter]}</span></button>`;
+                container.innerHTML += `
+                    <button onclick="select('${L}')" class="option-btn group w-full p-5 rounded-2xl border-2 text-left flex items-center gap-5 transition-all ${isSel ? 'border-blue-500 bg-blue-50 ring-4 ring-blue-50' : 'border-slate-100 hover:border-slate-200'}">
+                        <span class="w-10 h-10 rounded-xl border-2 flex items-center justify-center font-black transition-all ${isSel ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-400 group-hover:border-blue-300'}">${L}</span>
+                        <span class="text-lg ${isSel ? 'text-blue-900 font-bold' : 'text-slate-600'}">${q['option_'+letter]}</span>
+                    </button>`;
             });
             document.getElementById('q-timer').innerText = (questionTimeSpent[currentIdx] || 0) + "s";
             renderPalette();
         }
 
-        function select(val) { userAnswers[currentIdx] = val; renderQuestion(); }
+        function select(val) { userAnswers[currentIdx] = val; saveSession(); renderQuestion(); }
         function nextQ() { if(currentIdx < testData.questions.length - 1) { currentIdx++; renderQuestion(); } }
         function prevQ() { if(currentIdx > 0) { currentIdx--; renderQuestion(); } }
+        function clearAnswer() { delete userAnswers[currentIdx]; saveSession(); renderQuestion(); }
+
+        function confirmSubmit() { if(confirm("Are you sure you want to end the test?")) submitTest(); }
 
         async function submitTest() {
             clearInterval(globalTimer); clearInterval(questionTimer);
@@ -238,12 +313,11 @@
 
             const finalScore = (correct - (wrong * 0.33)).toFixed(2);
             
-            // SAVE TO DB
             await fetch(`${API_BASE}/save-attempt/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    test_id: testData.metadata.test_id,
+                    test_id: activeTestId,
                     total_time_taken: totalTime,
                     questions_attempted: Object.keys(userAnswers).length,
                     correct_count: correct,
@@ -252,13 +326,16 @@
                 })
             });
 
+            localStorage.removeItem(`session_${activeTestId}`);
             showResults(correct, wrong, totalTime, detailed, finalScore);
         }
 
+        // --- ANALYSIS LOGIC ---
         function showResults(c, w, tt, det, score) {
             document.getElementById('test-view').classList.add('hidden');
             document.getElementById('nav-timer').classList.add('hidden');
             document.getElementById('results-view').classList.remove('hidden');
+            
             document.getElementById('final-score-box').innerText = score;
             document.getElementById('stat-correct').innerText = c;
             document.getElementById('stat-wrong').innerText = w;
@@ -266,11 +343,36 @@
             document.getElementById('stat-speed').innerText = Math.round(tt/testData.questions.length) + "s";
 
             const container = document.getElementById('detailed-analysis');
-            container.innerHTML = testData.questions.map((q, i) => `
-                <div class="p-4 rounded-lg ${det[i].isCorrect ? 'bg-green-50' : (det[i].ans ? 'bg-red-50' : 'bg-slate-50')}">
-                    <p class="font-bold text-sm">Q${i+1}: ${q.question_text}</p>
-                    <p class="text-xs text-slate-500">Correct: ${q.correct_option} | Yours: ${det[i].ans || 'Skipped'} | Time: ${det[i].time}s</p>
-                </div>`).join('');
+            container.innerHTML = testData.questions.map((q, i) => {
+                const userAns = det[i].ans;
+                const isCorrect = det[i].isCorrect;
+                const time = det[i].time;
+                
+                let borderClass = "border-slate-100";
+                let icon = "";
+                if (userAns) {
+                    borderClass = isCorrect ? "border-green-200 bg-green-50/30" : "border-red-200 bg-red-50/30";
+                    icon = isCorrect ? "✅" : "❌";
+                }
+
+                return `
+                <div class="p-6 rounded-2xl border-2 ${borderClass} transition-all hover:shadow-md">
+                    <div class="flex justify-between items-start mb-4">
+                        <p class="font-bold text-slate-800 leading-snug"><span class="text-blue-600 mr-2">Q${i+1}.</span> ${q.question_text}</p>
+                        <span class="text-xs font-black bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm whitespace-nowrap">${time} SECS</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-100">
+                            <span class="text-[10px] font-black uppercase text-slate-400">Your Answer</span>
+                            <span class="font-bold ${isCorrect ? 'text-green-600' : 'text-red-600'}">${userAns || 'SKIPPED'} ${icon}</span>
+                        </div>
+                        <div class="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-100">
+                            <span class="text-[10px] font-black uppercase text-slate-400">Correct Answer</span>
+                            <span class="font-bold text-blue-600 uppercase">${q.correct_option}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
         }
 
         async function fetchHistory(testId) {
@@ -280,12 +382,25 @@
             const histCont = document.getElementById('history-container');
             const histList = document.getElementById('history-list');
             histCont.classList.remove('hidden');
-            histList.innerHTML = attempts.length ? attempts.map(a => `
-                <div class="flex justify-between py-2 border-b">
-                    <span>${new Date(a.created_at).toLocaleDateString()}</span>
-                    <span class="font-bold text-blue-600">Score: ${a.final_score}</span>
-                    <span class="text-slate-400">${Math.floor(a.total_time_taken/60)}m</span>
-                </div>`).join('') : "No attempts yet.";
+            
+            histList.innerHTML = attempts.length ? attempts.map((a, i) => `
+                <div class="flex justify-between items-center p-4 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition" onclick='viewPastAttempt(${JSON.stringify(a)})'>
+                    <div>
+                        <p class="font-bold text-slate-700">Attempt #${attempts.length - i}</p>
+                        <p class="text-xs text-slate-400">${new Date(a.created_at).toLocaleString()}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xl font-black text-blue-600">${a.final_score}</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">View Report →</p>
+                    </div>
+                </div>`).join('') : "<p class='text-center py-4 text-slate-400'>No attempts recorded.</p>";
+        }
+
+        async function viewPastAttempt(attempt) {
+            const res = await fetch(`${API_BASE}/get-test/${attempt.test_id}`);
+            testData = await res.json();
+            document.getElementById('creator-view').classList.add('hidden');
+            showResults(attempt.correct_count, attempt.questions_attempted - attempt.correct_count, attempt.total_time_taken, attempt.detailed_answers, attempt.final_score);
         }
     </script>
 </body>
