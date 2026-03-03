@@ -5,6 +5,8 @@ import io
 import uuid
 from .database import supabase
 from .schemas import Question
+from pydantic import BaseModel
+from datetime import datetime
 
 app = FastAPI()
 
@@ -15,6 +17,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class AttemptData(BaseModel):
+    test_id: str
+    total_time_taken: int
+    questions_attempted: int
+    correct_count: int
+    final_score: float
+    detailed_answers: dict
+
+@app.post("/save-attempt/")
+async def save_attempt(data: AttemptData):
+    # Insert the results into Supabase
+    response = supabase.table("test_attempts").insert({
+        "test_id": data.test_id,
+        "end_time": datetime.now().isoformat(),
+        "total_time_taken": data.total_time_taken,
+        "questions_attempted": data.questions_attempted,
+        "correct_count": data.correct_count,
+        "final_score": data.final_score,
+        "detailed_answers": data.detailed_answers
+    }).execute()
+    
+    return {"message": "Attempt saved", "id": response.data[0]['id']}
+
+@app.get("/attempts/{test_id}")
+async def get_attempts(test_id: str):
+    # Fetch all past attempts for a specific test
+    response = supabase.table("test_attempts").select("*").eq("test_id", test_id).order("created_at", desc=True).execute()
+    return response.data
 
 @app.post("/create-test-csv/")
 async def create_test_from_csv(
